@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8" />
+
+<head>
+<style>
+
+#datebutton {
+    width: 40em;  height: 2em;
+}
+.rectangle {
+	fill: steelblue;
+	stroke:rgb(0,0,0)
+}
+.rectangle:hover {
+	fill: orange;
+}
+.axis {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+</style>
+</head>
+<body>
+<H1 align="Center"> Interactive Analysis of Trillion $ GDP Nations </H1>
+<p align=left>
+The below char shows key macroeconomic indicators of all the countries that have a GDP over a trillion dollars. Over the course of last 10 years few countries have joined and a few have left the club. The indicators include total population, population by age group, interest rate, birth rate etc.. which could play a potential role in the overall GDP.
+</p>
+The chart is painted using D3 and the underlying data is read from a CSV file
+<p>
+
+</p>
+<p>
+The visulaization structure is based on narrative interactive visulaization. The top level view shows GDP of the trillion $ economies for each year going back to 2000. Once a particular year is choses, user can interospect the individual variables that are correlated with the GDP. Also the user can use the next/previous buttons to navigate in sequence
+</p>
+
+<p>
+The scene layout at the top level is laid out by year going backward in time.
+</p>
+
+<p>
+Annotations: Text message indicating how manyh countrikes qualified to be in the trillion dollar club is printed on the SVG cancass. Also Tooltips are provided as the user hovers over each bar to show the exact number
+</p>
+
+<p>
+Parameters: Year and the name of the indicators are used as the parameters to reflect the current state of the visualization
+</p>
+
+
+<p>
+Triggers: Change of year (by clicking on the button) and selecting a particular indicator on the drop down serve as triggers to change the current state and repaing the visulaization as per the new state.
+</p>
+
+
+<div id="datesel" align=center>
+	<input type="button" value="<< Prev" name="cb_prev" onclick=updateData(curIndex-1) />
+	<input name="updateButton" type="button"  value="2012" onclick=updateData(0) />
+    <input name="updateButton" type="button"  value="2011" onclick=updateData(1) />
+    <input name="updateButton" type="button"  value="2010" onclick=updateData(2) />
+    <input name="updateButton" type="button"  value="2009" onclick=updateData(3) />
+    <input name="updateButton" type="button"  value="2008" onclick=updateData(4) />
+    <input name="updateButton" type="button"  value="2007" onclick=updateData(5) />
+    <input name="updateButton" type="button"  value="2006" onclick=updateData(6) />
+    <input name="updateButton" type="button"  value="2005" onclick=updateData(7) />
+    <input name="updateButton" type="button"  value="2004" onclick=updateData(8) />
+    <input name="updateButton" type="button"  value="2003" onclick=updateData(9) />
+    <input name="updateButton" type="button"  value="2002" onclick=updateData(10) />
+    <input name="updateButton" type="button"  value="2001" onclick=updateData(11) />
+    <input name="updateButton" type="button"  value="2000" onclick=updateData(12) />
+	<input type="button" value="Next >>" name="cb_next" onclick=updateData(curIndex+1) />
+</div>
+<br>
+<div id="drop" align=center></div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var curIndex = 0
+var numPages = 13
+var dtArray = new Array ("12/1/2012","12/1/2011","12/1/2010","12/1/2009","12/1/2008","12/1/2007","12/1/2006","12/1/2005","12/1/2004","12/1/2003","12/1/2002","12/1/2001","12/1/2000")
+
+function updateData(newIdx) {
+
+if( newIdx < 0 ) { newIdx = 0; }
+if( newIdx > 12 ) { newIdx = 12; }
+curIndex = newIdx;
+
+var datestr = dtArray[curIndex]	
+d3.select("svg").remove();
+d3.select("select").remove();	
+d3.csv("wisummary.csv", function(error, data){
+
+var margin = {top: 80, right: 180, bottom: 80, left: 180},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr("align", "center")
+	.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	// filter year
+	var data = data.filter(function(d){return d.Year == datestr;});
+	// Get every column value
+	var elements = Object.keys(data[0])
+		.filter(function(d){
+			return ((d != "Year") & (d != "Country"));
+		});
+	
+	var selection = elements[0];
+
+	var y = d3.scale.linear()
+			.domain([0, d3.max(data, function(d){
+				return +d[selection];
+			})])
+			.range([height, 0]);
+
+	var x = d3.scale.ordinal()
+			.domain(data.map(function(d){ return d.Country;}))
+			.rangeBands([0, width]);
+
+
+	var xAxis = d3.svg.axis()
+		.scale(x)
+	    .orient("bottom");
+
+	var yAxis = d3.svg.axis()
+		.scale(y)
+	    .orient("left");
+
+		
+		
+	svg.append("g")
+    	.attr("class", "x axis")
+    	.attr("transform", "translate(0," + height + ")")
+    	.call(xAxis)
+    	.selectAll("text")
+    	.style("font-size", "10px")
+      	.style("text-anchor", "end")
+      	.attr("dx", "-.8em")
+      	.attr("dy", "-.55em")
+      	.attr("transform", "rotate(-90)" );
+
+
+ 	svg.append("g")
+    	.attr("class", "y axis")
+    	.call(yAxis);
+
+	svg.selectAll("rectangle")
+		.data(data)
+		.enter()
+		.append("rect")
+		.attr("class","rectangle")
+		.attr("width", width/data.length)
+		.attr("height", function(d){
+			return height - y(+d[selection]);
+		})
+		.attr("x", function(d, i){
+			return (width / data.length) * i ;
+		})
+		.attr("y", function(d){
+			return y(+d[selection]);
+		})
+		.append("title")
+		.text(function(d){
+			return d.Country + " : " + d[selection];
+		});
+	
+	svg.append("text")
+		.attr("x", 100)
+		.attr("y", 100)
+		.attr("dy", ".35em")
+		.text("Trillion $ Country count as of " +  datestr + " : " + data.length);
+		
+	var selector = d3.select("#drop")
+    	.append("select")
+    	.attr("id","dropdown")
+    	.on("change", function(d){
+        	selection = document.getElementById("dropdown");
+
+        	y.domain([0, d3.max(data, function(d){
+				return +d[selection.value];})]);
+
+        	yAxis.scale(y);
+
+        	d3.selectAll(".rectangle")
+           		.transition()
+	            .attr("height", function(d){
+					return height - y(+d[selection.value]);
+				})
+				.attr("x", function(d, i){
+					return (width / data.length) * i ;
+				})
+				.attr("y", function(d){
+					return y(+d[selection.value]);
+				})
+           		.ease("linear")
+           		.select("title")
+           		.text(function(d){
+           			return d.Country + " : " + d[selection.value];
+           		});
+      
+           	d3.selectAll("g.y.axis")
+           		.transition()
+           		.call(yAxis);
+
+         });
+
+    selector.selectAll("option")
+      .data(elements)
+      .enter().append("option")
+      .attr("value", function(d){
+        return d;
+      })
+      .text(function(d){
+        return d;
+      })
+
+
+});
+
+}
+</script>
+</body>
+</html>
